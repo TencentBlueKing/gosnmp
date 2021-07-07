@@ -207,7 +207,7 @@ func (t *TrapListener) listenUDP(addr string) error {
 			}
 
 			msg := buf[:rlen]
-			traps := t.Params.UnmarshalTrap(msg, false)
+			traps := t.Params.UnmarshalTrap(msg, true)
 
 			if traps != nil {
 				// Here we assume that t.OnNewTrap will not alter the contents

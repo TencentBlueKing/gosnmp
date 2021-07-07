@@ -127,6 +127,88 @@ type GoSNMP struct {
 
 	// Internal - used to sync requests to responses - snmpv3
 	msgID uint32
+
+	// bk support for multi-user
+	BkUsmMap BkUsmMap
+}
+
+// bkUsm
+type BkUsm struct {
+	MsgFlag SnmpV3MsgFlags
+	*UsmSecurityParameters
+}
+
+func (b *BkUsm) initBkUsm() error {
+	err := b.initSecurityKeys()
+	if err != nil {
+		return err
+	}
+	err = b.validate(b.MsgFlag)
+	if err != nil {
+		return err
+	}
+	err = b.init(nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//bkUsmMap
+type BkUsmMap struct {
+	mtx    *sync.RWMutex
+	usmMap map[string]*BkUsm
+}
+
+// get BkUsm By UserName And EngineID
+func (bm *BkUsmMap) GetBkUsmByUserNameEngineID(username, engineID string) *BkUsm {
+	if bm.usmMap == nil {
+		return nil
+	}
+	bm.mtx.Lock()
+	defer bm.mtx.Unlock()
+	key := username + bm.ParseEngineIDToStr(engineID)
+	return bm.usmMap[key]
+}
+
+// Add BkUsm to BkUsmMap
+func (bm *BkUsmMap) AddBkUsm(MsgFlag SnmpV3MsgFlags, sp *UsmSecurityParameters) error {
+	if bm.mtx == nil {
+		bm.mtx = new(sync.RWMutex)
+	}
+	bm.mtx.Lock()
+	defer bm.mtx.Unlock()
+	if bm.usmMap == nil {
+		bm.usmMap = make(map[string]*BkUsm)
+	}
+	key := sp.UserName + bm.ParseEngineIDToStr(sp.AuthoritativeEngineID)
+	if MsgFlag == NoAuthNoPriv {
+		sp.AuthenticationProtocol = NoAuth
+		sp.PrivacyProtocol = NoPriv
+	}
+	if MsgFlag == AuthNoPriv {
+		sp.PrivacyProtocol = NoPriv
+	}
+	bkUsm := &BkUsm{
+		MsgFlag:               MsgFlag,
+		UsmSecurityParameters: sp,
+	}
+	err := bkUsm.initBkUsm()
+	if err != nil {
+		return err
+	}
+	bm.usmMap[key] = bkUsm
+	return nil
+}
+
+// string([]byte{0x80, 0x09, 0x03, 0xc2, 0x01, 0x33, 0xc7})(engine) => 800903c20133c7
+func (bm *BkUsmMap) ParseEngineIDToStr(engineID string) string {
+	var str string
+	bs := []byte(engineID)
+	for _, b := range bs {
+		str += fmt.Sprintf("%02x", b)
+	}
+	return str
 }
 
 // Default connection settings

@@ -10,6 +10,10 @@ GetNext, GetBulk, Walk, BulkWalk, Set and Traps. It supports IPv4 and
 IPv6, using __SNMPv2c__ or __SNMPv3__. Builds are tested against
 linux/amd64 and linux/386.
 
+**Note: 本仓库 fork 自 https://github.com/gosnmp/gosnmp v1.29.0 并做了些改动，提供了新特性以兼容 BlueKing 采集插件的开发。**
+
+新特性：[CHANGELOG](./CHANGELOG.md)
+
 # About
 
 **gosnmp** was started by [Andreas Louca](https://github.com/alouca), then
